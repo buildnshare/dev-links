@@ -35,14 +35,14 @@ export const addGroup = async (groupName: string) => {
 export const removeGroup = async (groupName: string) => {
     try {
         const response = await client.hDel("groupHash", groupName);
-        if (!response)
+        if (response == 0)
             return {
                 status: "failure",
                 service: "remove-group",
             };
 
         return {
-            status: "sucecss",
+            status: "success",
             service: "remove-group",
         };
     } catch (err) {
@@ -65,7 +65,7 @@ export const addLinkToGroup = async (groupName: string, link: Link) => {
             JSON.stringify([...parsedGroups, link])
         );
 
-        if (!response)
+        if (response == null)
             return {
                 status: "failure",
                 service: "add-link",
@@ -101,7 +101,7 @@ export const removeLinkFromGroup = async (groupName: string, label: string) => {
             groupName,
             JSON.stringify(parsedGroups.filter((item: Link) => item.label != label))
         );
-        if (!response)
+        if (response == null)
             return {
                 status: "failure",
                 service: "remove-links",
@@ -182,14 +182,20 @@ export const showLinksInGroup = async (groupName: string) =>{
     }
  };
 
-export const showLinksByLabel = async (label: string) => { 
+export const showLinksByLabel = async (label: string, groupName?: string ) => { 
     try {
         const groupHash = await client.hGetAll("groupHash");
-        const groups = Object.entries(groupHash);
-        const searchResult = groups.filter((item) => {
-            const link = JSON.parse(item[1]);
-            if (link.label === label) link;
-        });
+        let groups = Object.entries(groupHash);   
+        let searchResult = [] 
+        if (groupName) groups = groups.filter((item) => item[0] === groupName);
+        searchResult = groups.map((item) => {
+            const links = JSON.parse(item[1]);
+            return {
+                groupName: item[0],
+                result: links.filter((item: Link) => item.label === label)
+            }
+        })
+        
         if (searchResult.length === 0) return {
             status: "label not found",
             service: "links",

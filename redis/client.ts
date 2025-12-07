@@ -21,4 +21,13 @@ export const connectRedis = async () => {
         console.log(err);
     }
 }
+
+export const closeRedisConn = async () => {
+    try {
+        await client.quit();
+        console.log('redis client closed');
+    } catch(err) {
+        console.error(err);
+    }
+}
   
