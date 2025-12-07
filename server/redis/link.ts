@@ -1,3 +1,4 @@
+import { isEqual } from "lodash";
 import { client } from "./client";
 
 export type Link = {
@@ -59,6 +60,13 @@ export const addLinkToGroup = async (groupName: string, link: Link) => {
     try {
         const groups = await client.hGet("groupHash", groupName);
         const parsedGroups = JSON.parse(groups!);
+        
+        const existsFilter = parsedGroups.filter((item: Link) => isEqual(item, link))
+        if (existsFilter.length > 0) return {
+            status: "failure",
+            service: "add-link",
+            error: 'link already exists',
+        }
         const response = await client.hSet(
             "groupHash",
             groupName,
@@ -182,7 +190,7 @@ export const showLinksInGroup = async (groupName: string) =>{
     }
  };
 
-export const showLinksByLabel = async (label: string, groupName?: string ) => { 
+export const showLinksByLabelOrGroup = async (label: string, groupName?: string ) => { 
     try {
         const groupHash = await client.hGetAll("groupHash");
         let groups = Object.entries(groupHash);   
@@ -194,7 +202,7 @@ export const showLinksByLabel = async (label: string, groupName?: string ) => {
                 groupName: item[0],
                 result: links.filter((item: Link) => item.label === label)
             }
-        })
+        }).filter(item => item.result.length > 0);
         
         if (searchResult.length === 0) return {
             status: "label not found",

@@ -1,5 +1,5 @@
-import { closeRedisConn, connectRedis } from "./redis/client";
-import { addGroup, addLinkToGroup, removeGroup, removeLinkFromGroup, showGroups, showLinksByLabel, showLinksInGroup, type Link } from "./redis/link"
+import { closeRedisConn, connectRedis } from "../server/redis/client";
+import { addGroup, addLinkToGroup, removeGroup, removeLinkFromGroup, showGroups, showLinksByLabelOrGroup, showLinksInGroup, type Link } from "../server/redis/link"
 
 export const addGroupAction = async (groupName: string) => {
     try {
@@ -47,7 +47,6 @@ export const addLinkAction = async (groupName: string, label: string, url: strin
     try {
         await connectRedis();
         const response = await addLinkToGroup(groupName, { label: label, link: url })
-        console.log(response);
         if (response.status === "failure") throw new Error()
         console.log(`added link ${label} to ${groupName}`);
     } catch (err) {
@@ -98,13 +97,13 @@ export const queryLinkAction = async (identifier:string, option: { group: string
     try {
         await connectRedis();
         const { group } = option;
-        const response = await showLinksByLabel(identifier, group);
+        const response = await showLinksByLabelOrGroup(identifier, group);
         if (response.status === "failure") throw new Error(response.error)
         if (response.status === "label not found") console.log("Link not found")
         else {
             const results = response.data;
             results?.forEach((item) => {
-                console.log(`group - ${item.groupName}`)
+                console.log(item.groupName)
                 item.result.forEach((item: Link) => console.log(`${item.label}\t${item.link}`))
             })
         }

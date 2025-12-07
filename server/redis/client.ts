@@ -1,6 +1,6 @@
 
 import { createClient } from 'redis';
-import config from '../config'
+import config from '../../config'
 
 export const client = createClient({
     username: config.redis.username,

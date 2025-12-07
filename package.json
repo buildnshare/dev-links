@@ -10,8 +10,14 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/lodash": "^4.17.21",
     "commander": "^14.0.2",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "lodash": "^4.17.21",
     "redis": "^5.10.0"
   }
 }

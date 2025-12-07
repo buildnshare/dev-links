@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { addGroupAction, addLinkAction, queryLinkAction, removeGroupAction, removeLinkAction, showGroupAction, showLinkAction } from './cli';
+import { addGroupAction, addLinkAction, queryLinkAction, removeGroupAction, removeLinkAction, showGroupAction, showLinkAction } from './action';
 import { Command } from 'commander';
 
 const program = new Command();
