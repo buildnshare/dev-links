@@ -1,83 +1,119 @@
-import { closeRedisConn, connectRedis } from "../server/redis/client";
-import { addGroup, addLinkToGroup, removeGroup, removeLinkFromGroup, showGroups, showLinksByLabelOrGroup, showLinksInGroup, type Link } from "../server/redis/link"
+import config from "../config";
+
+const appBaseUrl = `${config.server.protocol}://${config.server.host}:${config.server.port}`
+
+type Link = { label: string, link: string };
 
 export const addGroupAction = async (groupName: string) => {
     try {
-        await connectRedis();
-        const response = await addGroup(groupName);
-        if (response.status === "success") console.log(`added group ${groupName}`)
-        else console.log(`unable to add group ${groupName}`)
+        const response = await fetch(`${appBaseUrl}/api/group`, {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                groupName: groupName
+            })
+        });
+        
+        const data = await response.json();
+        const { status } = data as { status: string};
+        if (status === "success") console.log(`Added group ${groupName}`)
+        else console.log(`Unable to add group ${groupName}`)
     } catch (err) {
         console.error(err);
-    } finally {
-        await closeRedisConn();
     }
 }
 
 export const removeGroupAction = async (groupName: string) => {
     try {
-        await connectRedis();
-        const response = await removeGroup(groupName);
-        if (response.status === "success") console.log(`removed group ${groupName}`)
-        else console.log('unable to remove group');
+       const endpoint = `${appBaseUrl}/api/group/${groupName}`
+       const response = await fetch(endpoint, { method: 'DELETE'})
+       const data = await response.json();
+       const { status } = data as { status: string }
+       if (status === "failure") console.log(`Unable to remove ${groupName}`)
+       else console.log(`removed ${groupName}`)
     } catch (err) {
         console.error(err);
-    } finally {
-        await closeRedisConn();
     }
 }
 
 export const showGroupAction = async () => {
     try {
-        await connectRedis();
-        const response = await showGroups();
-        if (response.status === "success") {
-            console.log('Here are the groups');
-            response.response?.forEach((item) => console.log(item));
-        }
-        else console.log('unable to fetch groups');
+        const endpoint = `${appBaseUrl}/api/group`
+        const response = await fetch(endpoint);
+        const parsedData = await response.json();
+        const { status, response: data, error} = parsedData as { status: string, response: any, error: string}
+        if (status === "failure") console.log(`Unable to fetch groups\n${error}`)
+        else console.log(data);
     } catch (err) {
         console.error(err);
-    } finally {
-        await closeRedisConn();
     }
 }
 
 export const addLinkAction = async (groupName: string, label: string, url: string) => {
     try {
-        await connectRedis();
-        const response = await addLinkToGroup(groupName, { label: label, link: url })
-        if (response.status === "failure") throw new Error()
-        console.log(`added link ${label} to ${groupName}`);
+        const response = await fetch(`${appBaseUrl}/api/link`, {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                group: groupName,
+                label: label,
+                link: url
+            })
+        });
+        
+        const data = await response.json();
+        const { status } = data as { status: string};
+        if (status === "failure") console.log(`Unable to add link to group ${groupName}`)
+        else console.log(`Added link to group ${groupName}`)
     } catch (err) {
         console.log('unable to add link');
         console.error(err);
-    } finally {
-        await closeRedisConn()
     }
 }
 
 export const removeLinkAction = async (groupName: string, label: string) => {
     try {
-        await connectRedis();
-        const response = await removeLinkFromGroup(groupName, label)
-        console.log(response);
-        if (response.status === "failure") throw new Error()
-        console.log(`removed link ${label} to ${groupName}`);
+        const endpoint = `${appBaseUrl}/api/link/${groupName}/${label}`
+        const response = await fetch(endpoint, { method: 'DELETE'});
+        const data = await response.json();
+        const { status } = data as { status: string };
+        if (status === "failure") console.log(`Unable to remove link ${label} from ${groupName}`)
+        else console.log(`removed link ${label} from ${groupName}`)
     } catch (err) {
         console.log('unable to remove link');
         console.error(err);
-    } finally {
-        await closeRedisConn()
     }
 }
 
 export const showLinkAction = async (groupName: string) => {
     try {
-        await connectRedis();
-        const response = await showLinksInGroup(groupName)
-        if (response.status === "failure") throw new Error()
-        Object.values(response.data?.[0]).forEach((item) => {
+        const endpoint = `${appBaseUrl}/api/group/${groupName}/link`;
+        const response = await fetch(endpoint);
+        const parsedData = await response.json();
+        
+        
+        const { status, data, error} = parsedData as { status: string, data: any, error: string}
+        if (status === "failure") {
+            console.log(`Unable to fetch links for ${groupName}\n${error}`);
+            return;
+        }
+
+        if (status === "group not found") {
+            console.log(`Group ${groupName} not found.`);
+            return;
+        }
+
+        const linksData = data?.[0];
+        if (!linksData) {
+            console.log(`No links found in group ${groupName}`);
+            return;
+        }
+
+        Object.values(linksData).forEach((item) => {
             if (typeof item === "object" && item !== null && "label" in item && "link" in item) {
                 const { label, link } = item as Link;
                 console.log(`${label}\t${link}`);
@@ -87,31 +123,42 @@ export const showLinkAction = async (groupName: string) => {
     } catch (err) {
         console.log('unable to fetch links');
         console.error(err);
-    } finally {
-        await closeRedisConn()
     }
 }
 
-
 export const queryLinkAction = async (identifier:string, option: { group: string }) =>  {
     try {
-        await connectRedis();
         const { group } = option;
-        const response = await showLinksByLabelOrGroup(identifier, group);
-        if (response.status === "failure") throw new Error(response.error)
-        if (response.status === "label not found") console.log("Link not found")
-        else {
-            const results = response.data;
+        const params = new URLSearchParams({ label: identifier });
+        if (group) {
+            params.append('group', group);
+        }
+        const endpoint = `${appBaseUrl}/api/link?${params.toString()}`;
+
+        const response = await fetch(endpoint);
+        const parsedData = await response.json();
+
+        const { status, data, error} = parsedData as { status: string, data: any, error: string}
+        if (status === "failure") {
+            console.log(`Unable to fetch links\n${error}`);
+            return;
+        }
+
+        if (status === "label not found") {
+            console.log("Link not found");
+        } else {
+            const results = data as { groupName: string, result: Link[] }[];
+            if (!results || results.length === 0) {
+                console.log("No links found matching the criteria.");
+                return;
+            }
             results?.forEach((item) => {
-                console.log(item.groupName)
-                item.result.forEach((item: Link) => console.log(`${item.label}\t${item.link}`))
+                console.log(item.groupName);
+                item.result.forEach((linkItem: Link) => console.log(`\t${linkItem.label}\t${linkItem.link}`));
             })
         }
     } catch (err) {
         console.log('unable to fetch links');
         console.error(err);
-    } finally {
-        await closeRedisConn()
     }
-}   
-
+}
