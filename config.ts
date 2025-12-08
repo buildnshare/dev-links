@@ -4,8 +4,8 @@ dotenv.config({ quiet: true });
 
 export default {
     server: {
-        protocol: process.env.SERVER_PROTOCOL,
-        host: process.env.SERVER_HOST,
-        port: process.env.SERVER_PORT
+        protocol: 'http',
+        host: 'localhost',
+        port: 3000
     }
 }

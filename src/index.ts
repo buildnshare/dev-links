@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 import { addGroupAction, addLinkAction, queryLinkAction, removeGroupAction, removeLinkAction, showGroupAction, showLinkAction } from './action';
 import { Command } from 'commander';

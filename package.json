@@ -2,7 +2,14 @@
   "name": "dev-links",
   "module": "index.ts",
   "type": "module",
+  "author": "Abhiram A R abhiramajithr@gmail.com",
+  "license": "MIT",
+  "version": "1.0.0",
+  "bin": {
+    "dev-links": "src/index.ts"
+  },
   "private": true,
+  
   "devDependencies": {
     "@types/bun": "latest"
   },
