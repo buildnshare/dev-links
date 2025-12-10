@@ -17,12 +17,10 @@ export const addGroupAction = async (groupName: string) => {
             }),
         });
 
-        const data = await response.json();
-        const { status } = data as { status: string };
-        if (status === "success") buildSuccessMessage(`Added ${groupName}`);
-        else buildFailMessage(`Unable to add group ${groupName}`);
+        const parsedResponse = await response.json() as { error? : string, success?: string };
+        !response.ok ? buildFailMessage(parsedResponse.error!) : buildSuccessMessage(parsedResponse.success!);
     } catch (err) {
-        console.error(err);
+        buildFailMessage(`Unable to add group ${err}`);
     }
 };
 
@@ -32,13 +30,10 @@ export const removeGroupAction = async (groupName: string) => {
 
         const response = await fetch(endpoint, { method: "DELETE" });
 
-        const data = await response.json();
-
-        const { status, error } = data as { status: string, error: string };
-        if (error) buildFailMessage(`${error}`);
-        if (status === "success") buildSuccessMessage(`removed ${groupName}`);
+        const data = await response.json() as { error?: string, success?: string};
+        !response.ok ? buildFailMessage(data.error!) : buildSuccessMessage(data.success!);  
     } catch (err) {
-        console.error(err);
+        buildFailMessage(`Unable to remove group ${err}`)
     }
 };
 
@@ -46,17 +41,10 @@ export const showGroupAction = async () => {
     try {
         const endpoint = `${appBaseUrl}/api/group`;
         const response = await fetch(endpoint);
-        const parsedData = await response.json();
-        const {
-            status,
-            response: data,
-            error,
-        } = parsedData as { status: string; response: any; error: string };
-        if (status === "failure")
-            buildFailMessage(`Unable to fetch groups\n${error}`);
-        else buildShowGroupMessage(data);
+        const parsedData = await response.json() as { error? : string, data?: Array<string>};
+        !response.ok ? buildFailMessage(parsedData.error!) : buildShowGroupMessage(parsedData.data!);
     } catch (err) {
-        console.error(err);
+        buildFailMessage(`unable to fetch groups ${err}`)
     }
 };
 
@@ -79,12 +67,10 @@ export const addLinkAction = async (
         });
 
 
-        const data = await response.json();
-        const { status, error } = data as { status: string, error: string };
-        if (error) buildFailMessage(`${error}`);
-        if (status == "success") buildSuccessMessage(`Added link ${url} to group ${groupName}`);
+        const data = await response.json() as { error? : string, success?: string};
+        !response.ok ? buildFailMessage(data.error!) : buildSuccessMessage(data.success!);
     } catch (err) {
-        console.error(err);
+        buildFailMessage(`unable to add link ${err}`)
     }
 };
 
@@ -92,12 +78,10 @@ export const removeLinkAction = async (groupName: string, label: string) => {
     try {
         const endpoint = `${appBaseUrl}/api/link/${groupName}/${label}`;
         const response = await fetch(endpoint, { method: "DELETE" });
-        const data = await response.json();
-        const { status, error } = data as { status: string, error: string };
-        if (error) buildFailMessage(`${error}`);
-        if (status === "success") buildSuccessMessage(`removed ${label} from ${groupName}`);
+        const data = await response.json() as { error? : string, success?: string};
+        response.ok ? buildFailMessage(data.error!) : buildSuccessMessage(data.success!);
     } catch (err) {
-        console.error(err);
+        buildFailMessage(`Unable to remove link ${err}`)
     }
 };
 
@@ -105,43 +89,16 @@ export const showLinkAction = async (groupName: string) => {
     try {
         const endpoint = `${appBaseUrl}/api/group/${groupName}/link`;
         const response = await fetch(endpoint);
-        const parsedData = await response.json();
+        const parsedData = await response.json() as { error?: string, data?: any};
 
-        const { status, data, error } = parsedData as {
-            status: string;
-            data: any;
-            error: string;
-        };
-        if (status === "failure") {
-            buildFailMessage(`Unable to fetch links for ${groupName}\n${error}`);
-            return;
+        if (!response.ok ) {
+             buildFailMessage(parsedData.error!);
+             return ;
         }
 
-        if (status === "group not found") {
-            buildFailMessage(`Group ${groupName} not found.`);
-            return;
-        }
-
-        const linksData = data?.[0];
-        if (!linksData) {
-            buildFailMessage(`No links found in group ${groupName}`);
-            return;
-        }
-
-        const values = Object.values(linksData).map((item) => {
-            if (
-                typeof item === "object" &&
-                item !== null &&
-                "label" in item &&
-                "link" in item
-            ) {
-                return item;
-            }
-        }).filter(item => item != undefined) as Link[];
-
-        buildShowLinksByGroupMessage(values)
+        parsedData.data.forEach((item: { groupName: string, links: Link[] }) => buildShowLinksByGroupMessage(item.links))
     } catch (err) {
-        console.error(err);
+        buildFailMessage(`Unable to fetch links ${err}`)
     }
 };
 
@@ -152,34 +109,21 @@ export const queryLinkAction = async (
     try {
         const { group } = option;
         const params = new URLSearchParams({ label: identifier });
-        if (group) {
-            params.append("group", group);
-        }
+        if (group != undefined) params.append("group", group);
+
+
         const endpoint = `${appBaseUrl}/api/link?${params.toString()}`;
 
         const response = await fetch(endpoint);
-        const parsedData = await response.json();
+        const parsedData = await response.json() as { error?: string, data?: Array<{ groupName: string, result: Link[]}>};
 
-        const { status, data, error } = parsedData as {
-            status: string;
-            data: any;
-            error: string;
-        };
-        if (status === "failure") {
-            buildFailMessage(`Unable to fetch links\n${error}`);
-            return;
+        if (!response.ok) {
+            buildFailMessage(parsedData.error!)
+            return ;
         }
 
-        if (status === "label not found") {
-            buildFailMessage("Link not found");
-        } else {
-            const results = data as { groupName: string; result: Link[] }[];
-            if (!results || results.length === 0) {
-                buildFailMessage("No links found matching the criteria.");
-                return;
-            }
-            buildShowLinksByLabelMessage(results)
-        }
+        const results = parsedData.data!;
+        buildShowLinksByLabelMessage(results)
     } catch (err) {
         console.error(err);
     }
